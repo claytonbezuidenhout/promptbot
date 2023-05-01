@@ -85,3 +85,7 @@ class BreakdownBot(PromptBot):
         self.set_goal(text)
         return self.run_ai()
 ```
+
+## Documentation
+
+You can find the documentation for promptbot in the `/docs` directory.

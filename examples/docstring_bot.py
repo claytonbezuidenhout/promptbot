@@ -3,7 +3,7 @@ from promptbot import PromptBot
 
 def main():
     bot = (
-        PromptBot()
+        PromptBot("DocstringBot")
         .add_cmd("I can enrich python code with exceptional docstrings. I can explain what a function does.")
         .add_rule("I must output only in Python file format")
         .add_rule("I cannot change the code in any way")
