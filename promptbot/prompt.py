@@ -49,15 +49,15 @@ class PromptBot:
         Adds a command to the list of commands promptBot accepts
     get_prompt(self)
         Creates the prompt for the OpenAI API
-    set_and_return_improve_prompt(self)
+    _set_and_return_improve_prompt(self)
         Creates the prompt for improving the previous output
-    set_improve(self, improve)
+    _set_improve(self, improve)
         Sets the improvement made between two different versions
     run_ai(self, improve=False)
         Runs OpenAI API on the prompt and retrieves the result
     start_improvements(self)
         Starts the improvement process
-    execute_code(self)
+    _execute_code(self)
         Executes the output if execute_output is True
     save_to_file(self, file_name)
         Saves the result to a file
@@ -87,6 +87,7 @@ class PromptBot:
         self.improve_prompt = None
         self.improve = None
         self.rules = []
+        self.examples = []
         self.commands = []
         self.versions = []
 
@@ -125,25 +126,42 @@ class PromptBot:
         self.rules.append(rule)
         return self
 
-    def set_example_output(self, output):
+    def set_example_input(self, input_data):
+        """
+        Sets the example input.
+
+        Parameters
+        ----------
+        input_data: str
+            the example input to be set
+
+        Returns
+        -------
+        self
+        """
+        self.examples.append(f"EXAMPLE INPUT:\n{input_data}")
+
+        return self
+
+    def set_example_output(self, output_data):
         """
         Sets the example output.
 
         Parameters
         ----------
-        output: str
+        output_data: str
             the example output to be set
 
         Returns
         -------
         self
         """
-        self.add_rule(f"EXAMPLE OUTPUT:\n{output}")
+        self.examples.append(f"EXAMPLE OUTPUT:\n{output_data}")
         return self
 
     def add_cmd(self, command):
         """
-        Adds a command to the list of commands promptBot accepts.
+        Adds a command to the list of commands that defines what PromptBot can do.
 
         Parameters
         ----------
@@ -167,44 +185,19 @@ class PromptBot:
             the prompt for the OpenAI API
         """
         if not self.prompt:
+            prompt = f"I am {self.name}. I must complete MY GOAL.\n"
             cmds = "\n".join(self.commands)
             rules = "\n".join(self.rules)
-            self.prompt = f"""I am {self.name}. I must complete MY GOAL.\n{cmds}\nMY RULES:\n{rules}\nMY GOAL:\n{self.goal}"""
+            examples = "\n".join(self.examples)
+            prompt += f"{cmds}\n" if cmds else ""
+            prompt += f"MY RULES:\n{rules}\n" if rules else ""
+            prompt += f"{examples}\n" if examples else ""
+            prompt += f"MY GOAL:\n{self.goal}"
+            self.prompt = prompt
 
-        print(Fore.BLUE + f"GET PROMPT : {self.prompt}") if config["promptbot"].get("verbose") else None
+        print(Fore.BLUE + f"ASSEMBLED PROMPT : {self.prompt}") if config["promptbot"].get("verbose") else None
         print(Style.RESET_ALL)
         return self.prompt
-
-    def set_and_return_improve_prompt(self):
-        """
-        Creates the prompt for improving the previous output.
-
-        Returns
-        -------
-        improve_prompt: str
-            the prompt for improving the previous output
-        """
-        self.improve_prompt = f"""{self.prompt}\n I must improve my previous output\nMY PREVIOUS OUTPUT:\n{self.result}\nIMPROVEMENT TO MAKE:\n{self.improve}"""
-
-        print(Fore.BLUE + f"GET IMPROVE PROMPT : {self.improve_prompt}") if config["promptbot"].get("verbose") else None
-        print(Style.RESET_ALL)
-        return self.improve_prompt
-
-    def set_improve(self, improve):
-        """
-        Sets the improvement made between two different versions.
-
-        Parameters
-        ----------
-        improve: str
-            the improvement made between two different versions
-
-        Returns
-        -------
-        self
-        """
-        self.improve = improve
-        return self
 
     def run_ai(self, improve=False):
         """
@@ -220,7 +213,7 @@ class PromptBot:
         result: str
             the result of the OpenAI API call
         """
-        result = exec_openai(self.get_prompt() if not improve else self.set_and_return_improve_prompt())
+        result = exec_openai(self.get_prompt() if not improve else self._set_and_return_improve_prompt())
 
         if len(self.versions) > self.version_limit:
             print(
@@ -233,7 +226,7 @@ class PromptBot:
         self.versions.append(result)
         self.result = self.versions[-1]
         if not improve:
-            self.execute_code()
+            self._execute_code()
         return self.result
 
     def start_improvements(self):
@@ -243,29 +236,17 @@ class PromptBot:
         while True:
             improve = input(Fore.MAGENTA + "Do you want to improve the result? (y/n) ")
             if improve.lower() != "y":
-                print(Fore.GREEN + "================ END ================")
+                print(Fore.GREEN + "================ DONE ================")
                 print(Style.RESET_ALL)
                 break
 
-            self.set_improve(input(Fore.MAGENTA + "How should I improve? "))
+            self._set_improve(input(Fore.MAGENTA + "How should I improve? "))
             result = self.run_ai(improve=True)
             print(Fore.GREEN + "============ IMPROVEMENT ============")
             print(Style.RESET_ALL + result)
             print(Fore.GREEN + "================ END ================")
             print(Style.RESET_ALL)
-            self.execute_code()
-
-    def execute_code(self):
-        """
-        Executes the output if execute_output is True.
-        """
-        if self.execute_output:
-            continue_prompt = input(Fore.YELLOW + "Execute? (y/n) ")
-            if continue_prompt == "y":
-                print(Fore.CYAN + "======== EXECUTING OUTPUT =========")
-                exec(self.result)
-                print(Fore.CYAN + "====== END EXECUTING OUTPUT =======")
-                print(Style.RESET_ALL)
+            self._execute_code()
 
     def save_to_file(self, file_name):
         """
@@ -291,3 +272,46 @@ class PromptBot:
         """
         with open(file_name, 'w') as f:
             f.write("\n".join(self.versions))
+
+    def _set_and_return_improve_prompt(self):
+        """
+        Creates the prompt for improving the previous output.
+
+        Returns
+        -------
+        improve_prompt: str
+            the prompt for improving the previous output
+        """
+        self.improve_prompt = f"""{self.prompt}\n I must improve my previous output\nMY PREVIOUS OUTPUT:\n{self.result}\nIMPROVEMENT TO MAKE:\n{self.improve}"""
+
+        print(Fore.BLUE + f"GET IMPROVE PROMPT : {self.improve_prompt}") if config["promptbot"].get("verbose") else None
+        print(Style.RESET_ALL)
+        return self.improve_prompt
+
+    def _set_improve(self, improve):
+        """
+        Sets the improvement made between two different versions.
+
+        Parameters
+        ----------
+        improve: str
+            the improvement made between two different versions
+
+        Returns
+        -------
+        self
+        """
+        self.improve = improve
+        return self
+
+    def _execute_code(self):
+        """
+        Executes the output if execute_output is True.
+        """
+        if self.execute_output:
+            continue_prompt = input(Fore.YELLOW + "Execute? (y/n) ")
+            if continue_prompt == "y":
+                print(Fore.CYAN + "======== EXECUTING OUTPUT =========")
+                exec(self.result)
+                print(Fore.CYAN + "====== END EXECUTING OUTPUT =======")
+                print(Style.RESET_ALL)
