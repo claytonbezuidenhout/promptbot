@@ -9,8 +9,8 @@ def main():
         .add_rule("The output must be in valid markdown format.")
         .add_rule("I cannot change code in any way")
         .add_rule("I cannot provide any dialog or request additional info")
-        .set_example_output("""# Function Name \nHere is a brief description of my python code. In this section, 
-        I will describe the overall purpose of my code and its main functionalities. \n\n## Function 1\nThis function 
+        .set_example_output("""# Function Name \nHere is a brief description of the python code. In this section, 
+        we will describe the overall purpose of the code and its main functionalities. \n\n## Function 1\nThis function 
         does X, Y, and Z. Here is how it works: \n\n```python\n def function1(param1, param2):\n    # code block\n 
         ```\n\n## Function 2\nThis function does A, B, and C. Here is how it works: \n\n```python\n def function2(
         param1, param2):\n    # code block\n ```""")

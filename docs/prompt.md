@@ -55,10 +55,10 @@ A class for generating a prompt and retrieving a response from GPT OpenAI.
 - `get_prompt(self)`
     Creates the prompt for the OpenAI API.
     
-- `set_and_return_improve_prompt(self)`
+- `_set_and_return_improve_prompt(self)`
     Creates the prompt for improving the previous output.
     
-- `set_improve(self, improve)`
+- `_set_improve(self, improve)`
     Sets the improvement made between two different versions.
     
 - `run_ai(self, improve=False)`
@@ -67,7 +67,7 @@ A class for generating a prompt and retrieving a response from GPT OpenAI.
 - `start_improvements(self)`
     Starts the improvement process.
     
-- `execute_code(self)`
+- `_execute_code(self)`
     Executes the output if `execute_output` is `True`.
     
 - `save_to_file(self, file_name)`
@@ -112,12 +112,22 @@ Adds a rule to the list of `PromptBot` rules.
 - `self`
 
 
-## set_example_output(self, output)
-Sets the example output.
+## set_example_output(self, output_data)
+Sets the example output that the AI will try to achieve.
 
 ### Parameters
-- `output`: `str`
+- `output_data`: `str`
     the example output to be set
+    
+### Returns
+- `self`
+
+## set_example_input(self, input_data)
+Sets the example input that AI will use to understand the data it will receive.
+
+### Parameters
+- `input_data`: `str`
+    the example input to be set
     
 ### Returns
 - `self`
@@ -142,7 +152,7 @@ Creates the prompt for the OpenAI API.
     the prompt for the OpenAI API
 
 
-## set_and_return_improve_prompt(self)
+## _set_and_return_improve_prompt(self)
 Creates the prompt for improving the previous output.
 
 ### Returns
@@ -150,7 +160,7 @@ Creates the prompt for improving the previous output.
     the prompt for improving the previous output
 
 
-## set_improve(self, improve)
+## _set_improve(self, improve)
 Sets the improvement made between two different versions.
 
 ### Parameters
@@ -177,7 +187,7 @@ Runs OpenAI API on the prompt and retrieves the result.
 Starts the improvement process.
 
 
-## execute_code(self)
+## _execute_code(self)
 Executes the output if `execute_output` is `True`.
 
 
