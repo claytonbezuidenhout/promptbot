@@ -1,0 +1,9 @@
+[openai]
+organization="org-YoUrOrGaNiZaTiOn"
+api_key="sk-YourApiKeyHeRe"
+model="gpt-3.5-turbo"
+[promptbot]
+verbose=false
+[google] # You can add your own config to the promptbot config file and use it in your application. `from promptbot import config`
+api_key="AIzaSyDwmRULIMIF8yah1h-lPniV8x5sh4SiD_8"
+cse_id="5632580da18504a6f"

@@ -8,7 +8,7 @@ readme = open(os.path.join(cwd, 'README.md')).read()
 
 setup(
     name='promptbot',
-    version='0.0.1-alpha.6',
+    version='0.0.2-alpha.1',
     author='Clayton Bezuidenhout',
     author_email='claytonbez.nl@gmail.com',
     description='A Python package for generating prompt bots on top of OpenAI GTP Apis.',

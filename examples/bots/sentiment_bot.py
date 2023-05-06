@@ -1,5 +1,7 @@
 from promptbot import PromptBot
+from promptbot.tools.logger import get_logger
 
+log = get_logger()
 
 class SentimentBot(PromptBot):
 
@@ -27,7 +29,7 @@ if __name__ == "__main__":
         "Somewhat of a drag at times, but generally good",
     ]
     bot.start(data)
-    print(bot.result)
+    log.info(f"Result: {bot.result}")
     bot.start_improvements()
     with open("____sentiment_result.json", "w") as f:
         f.write(bot.result)

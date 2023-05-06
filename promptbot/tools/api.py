@@ -1,8 +1,7 @@
 import openai
 
-from promptbot.classes import ConfigManager
+from .config_manager import config
 
-config = ConfigManager().get_config()
 openai.organization = config['openai']['organization']
 openai.api_key = config['openai']['api_key']
 

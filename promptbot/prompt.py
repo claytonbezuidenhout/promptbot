@@ -1,12 +1,17 @@
+import inspect
+import traceback
+
 from colorama import Fore, Style
 
-from promptbot.api import exec_openai
-from promptbot.classes import ConfigManager
+from promptbot.tools.api import exec_openai
+from promptbot.tools.config_manager import config
+from promptbot.tools.input_mixin import InputMixin
+from promptbot.tools.logger import get_logger
 
-config = ConfigManager().get_config()
+log = get_logger()
 
 
-class PromptBot:
+class PromptBot(InputMixin):
     """
     A class for generating a prompt and retrieving a response from GPT OpenAI.
 
@@ -64,7 +69,8 @@ class PromptBot:
     save_versions(self, file_name)
         Saves all versions of output to a file
     """
-    def __init__(self, name=None, execute_output=False, version_limit=3):
+
+    def __init__(self, name=None, execute_output=False, version_limit=3, filter_defaults=True, autonomous=False):
         """
         Initializes the PromptBot object.
 
@@ -80,6 +86,8 @@ class PromptBot:
         self.name = name if name else "promptBot"
         self.execute_output = execute_output
         self.version_limit = version_limit
+        self.filter_defaults = filter_defaults  # used by plugins to remove parameters with default in the prompt
+        self.autonomous = autonomous  # will execute without user input if True
 
         self.goal = None
         self.result = None
@@ -90,8 +98,11 @@ class PromptBot:
         self.examples = []
         self.commands = []
         self.versions = []
+        self.plugins = {}
 
-        self.add_cmd(f"I am autonomous. There are no users, just {self.name}.")
+        self.add_cmd(f"I am autonomous. There's no users, just {self.name}.")
+        if self.execute_output:
+            self.add_rule("My output will be executed in Python. I must output only valid Python code.")
 
     def set_goal(self, goal):
         """
@@ -175,6 +186,12 @@ class PromptBot:
         self.commands.append(command)
         return self
 
+    def add_plugin(self, plugin_class):
+        if not self.execute_output:
+            raise Exception("Cannot add plugins if execute_output is False.")
+        self.plugins[plugin_class.NAME] = plugin_class
+        return self
+
     def get_prompt(self):
         """
         Creates the prompt for the OpenAI API.
@@ -190,13 +207,26 @@ class PromptBot:
             rules = "\n".join(self.rules)
             examples = "\n".join(self.examples)
             prompt += f"{cmds}\n" if cmds else ""
+
+            if self.plugins:
+                prompt += "I have plugins. Python functions I can use to help finish MY GOAL. I must use them like the example/s below.\n"
+                prompt += "MY PLUGINS:\n"
+                for plugin_name, plugin in self.plugins.items():
+                    signature = inspect.signature(plugin.run)
+                    param_list = []
+                    for param in signature.parameters:
+                        if "=" in param and self.filter_defaults:
+                            continue
+                        param_list.append(param)
+                    param_text = ", ".join([param for param in signature.parameters])
+                    prompt += f"- self.plugins['{plugin_name}'].run({param_text}) # {plugin.EXPLAIN}\n"
+
             prompt += f"MY RULES:\n{rules}\n" if rules else ""
             prompt += f"{examples}\n" if examples else ""
             prompt += f"MY GOAL:\n{self.goal}"
             self.prompt = prompt
 
-        print(Fore.BLUE + f"ASSEMBLED PROMPT : {self.prompt}") if config["promptbot"].get("verbose") else None
-        print(Style.RESET_ALL)
+        log.debug(f"{Fore.BLUE}ASSEMBLED PROMPT : {self.prompt}{Style.RESET_ALL}")
         return self.prompt
 
     def run_ai(self, improve=False):
@@ -216,11 +246,7 @@ class PromptBot:
         result = exec_openai(self.get_prompt() if not improve else self._set_and_return_improve_prompt())
 
         if len(self.versions) > self.version_limit:
-            print(
-                Fore.YELLOW + f"Dropping a version of output due to limit of {self.version_limit}"
-            ) if config["promptbot"].get("verbose") else None
-            print(Style.RESET_ALL)
-
+            log.debug(f"{Fore.YELLOW}Dropping a version of output due to limit of {self.version_limit}{Style.RESET_ALL}")
             self.versions.pop(0)
 
         self.versions.append(result)
@@ -234,18 +260,14 @@ class PromptBot:
         Starts the improvement process.
         """
         while True:
-            improve = input(Fore.MAGENTA + "Do you want to improve the result? (y/n) ")
-            if improve.lower() != "y":
-                print(Fore.GREEN + "================ DONE ================")
-                print(Style.RESET_ALL)
+            if not self.check_improve():
                 break
 
-            self._set_improve(input(Fore.MAGENTA + "How should I improve? "))
+            self._set_improve(self.get_input(Fore.MAGENTA + "How should I improve? "))
             result = self.run_ai(improve=True)
-            print(Fore.GREEN + "============ IMPROVEMENT ============")
-            print(Style.RESET_ALL + result)
-            print(Fore.GREEN + "================ END ================")
-            print(Style.RESET_ALL)
+            log.info(f"{Fore.GREEN}============ IMPROVEMENT ============{Style.RESET_ALL}")
+            log.info(result)
+            log.info(f"{Fore.GREEN}=========== /IMPROVEMENT ============{Style.RESET_ALL}")
             self._execute_code()
 
     def save_to_file(self, file_name):
@@ -284,8 +306,7 @@ class PromptBot:
         """
         self.improve_prompt = f"""{self.prompt}\n I must improve my previous output\nMY PREVIOUS OUTPUT:\n{self.result}\nIMPROVEMENT TO MAKE:\n{self.improve}"""
 
-        print(Fore.BLUE + f"GET IMPROVE PROMPT : {self.improve_prompt}") if config["promptbot"].get("verbose") else None
-        print(Style.RESET_ALL)
+        log.debug(f"{Fore.BLUE} IMPROVE PROMPT : {self.improve_prompt}{Style.RESET_ALL}")
         return self.improve_prompt
 
     def _set_improve(self, improve):
@@ -304,14 +325,37 @@ class PromptBot:
         self.improve = improve
         return self
 
-    def _execute_code(self):
+    def _get_fixed_code(self, old_code, traceback_error):
+        prompt = f"I must fix my code. \n code I wrote: \n```{old_code}```\n error: \n```{traceback_error}```\n"
+        prompt += f"Original Task: {self.goal}\n. GOLDEN RULE: only output the code. " \
+                  f"I cannot ask questions or provide dialogue.\n"
+
+        result = exec_openai(prompt)
+        return result
+
+    def _execute_code(self, result=None):
         """
         Executes the output if execute_output is True.
         """
         if self.execute_output:
-            continue_prompt = input(Fore.YELLOW + "Execute? (y/n) ")
-            if continue_prompt == "y":
-                print(Fore.CYAN + "======== EXECUTING OUTPUT =========")
-                exec(self.result)
-                print(Fore.CYAN + "====== END EXECUTING OUTPUT =======")
-                print(Style.RESET_ALL)
+            log.info(f"{Fore.LIGHTGREEN_EX}======== OUTPUT =========")
+            log.info(self.result if not result else result)
+            log.info(f"======== /OUTPUT ========={Fore.RESET}")
+            while True:
+                continue_execution = self.check_execute() if not self.autonomous else True
+                if not continue_execution:
+                    break
+
+                try:
+                    log.info(f"{Fore.CYAN}======== EXECUTING =========")
+                    exec(self.result if not result else result)
+                    log.info(f"======== /EXECUTING ========={Fore.RESET}")
+                    break
+                except Exception:
+                    error = traceback.format_exc()
+                    log.error(f"{Fore.RED}======== ERROR =========")
+                    log.error(error)
+                    log.error(f"======== /ERROR ========={Fore.RESET}")
+                    fixed_code = self._get_fixed_code(self.result if not result else result, error)
+                    self._execute_code(fixed_code)
+

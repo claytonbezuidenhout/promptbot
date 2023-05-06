@@ -1,7 +1,6 @@
-import os
-from pathlib import Path
-
 import toml
+
+from promptbot.tools.env import env
 
 
 class ConfigManager:
@@ -29,7 +28,7 @@ class ConfigManager:
         if cls.__instance is None:
             cls.__instance = object.__new__(cls)
             try:
-                with open(Path(os.curdir, 'promptbot.toml'), 'r') as f:
+                with open(env.CONFIG_PATH, 'r') as f:
                     cls.__instance.config = toml.load(f)
             except FileNotFoundError:
                 raise FileNotFoundError(
@@ -44,3 +43,6 @@ class ConfigManager:
             A dictionary containing the contents of the config file.
         """
         return self.config
+
+
+config = ConfigManager().get_config()
