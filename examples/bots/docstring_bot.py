@@ -1,4 +1,7 @@
 from promptbot import PromptBot
+from promptbot.tools.logger import get_logger
+
+log = get_logger()
 
 
 def main():
@@ -9,7 +12,6 @@ def main():
         .add_rule("I cannot change the code in any way")
         .add_rule("I must not move any imports or declarations")
         .add_rule("I cannot provide any dialog or request additional info")
-
     )
 
     file = input("Enter the path to a python file: ")
@@ -17,7 +19,7 @@ def main():
         data = f.read()
     bot.set_goal(data)
     bot.run_ai()
-    print(bot.result)
+    log.info(f"Result: \n{bot.result}")
     bot.start_improvements()
     with open(f"__improved__.{file}", "w") as f:
         f.write(bot.result)

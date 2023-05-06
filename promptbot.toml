@@ -3,4 +3,5 @@ organization="org-YoUrOrGaNiZaTiOn"
 api_key="sk-YourApiKeyHeRe"
 model="gpt-3.5-turbo"
 [promptbot]
-verbose=false
+log_level="info"
+log_format="%(message)s"

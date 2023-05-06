@@ -1,30 +1,61 @@
 from promptbot import PromptBot
+from promptbot.tools.logger import get_logger
+
+log = get_logger()
 
 
 class TagBot(PromptBot):
+    """
+    A class for creating creative tags for products based on text descriptions
+    using linguistics to convey meaning in tags.
+    Rules:
+    1. Must output only in valid CSV format.
+    2. Cannot provide any dialog or request additional info.
+    3. Cannot change the product ID.
+    Methods:
+    yield_batches(list_of_products, batch_size) --> divides products into batches
+    run(list_of_products) --> generates tags for each product batch
+    Attributes:
+    None
+    """
+
     def __init__(self):
         super().__init__("TagBot")
         self.add_cmd("I create creative tags for products based on text descriptions.")
-        self.add_cmd("I am an expert at linguistics and can easily ensure meaning is conveyed at tag creation.")
+        self.add_cmd(
+            "I am an expert at linguistics and can easily ensure meaning is conveyed at tag creation."
+        )
         self.add_rule("I must output only in valid CSV format")
         self.add_rule("I cannot provide any dialog or request additional info")
-        self.add_rule("I must not change the product ID")
-        self.set_example_input('{"id":"B04", "text":"Glittered Hammock Shirt with stylish buttons"}\n')
-        self.set_example_output('123|Glittered Hammock Shirt with stylish buttons|shirt, glitter, stylish')
+        self.add_rule("I cannot change the product ID")
+        self.set_example_input(
+            '{"id":"B04", "text":"Glittered Hammock Shirt with stylish buttons"}\n')
+        self.set_example_output(
+            '123|Glittered Hammock Shirt with stylish buttons|shirt, glitter, stylish')
 
     @staticmethod
-    def yield_batches(list_of_products, batch_size=10):
+    def yield_batches(list_of_products: list, batch_size: int = 10) -> None:
+        """
+        Divides a list of products into batches.
+        :param list_of_products: A list of products for which to generate tags.
+        :param batch_size: The number of products in each batch. Default is 10.
+        :return: None
+        """
         for i in range(0, len(list_of_products), batch_size):
             yield list_of_products[i:i + batch_size]
 
-    def run(self, list_of_products):
+    def run(self, list_of_products) -> list[str]:
+        """
+        Generates tags for each batch of products and returns the results.
+        :param list_of_products: A list of products for which to generate tags.
+        :return: A list containing the generated tags for each batch of products.
+        """
         results = []
         for batch in self.yield_batches(list_of_products, batch_size=10):
-            print("Processing batch of " + str(len(batch)) + " tag requests")
+            log.info(f"Processing batch of {len(batch)} tag requests")
             self.set_goal(f"GENERATE TAGS FOR:\n{batch}")
             result = self.run_ai()
             results.append(result)
-
         return results
 
 
@@ -64,7 +95,7 @@ if __name__ == "__main__":
     ]
 
     bot.run(product_list)
-    print(bot.result)
+    log.info(f"Result: {bot.result}")
     bot.start_improvements()
     with open("tags_result.csv", "w") as f:
         f.write(bot.result)

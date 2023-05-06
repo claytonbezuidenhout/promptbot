@@ -1,25 +1,39 @@
 from promptbot import PromptBot
+from promptbot.tools.logger import get_logger
+
+log = get_logger()
 
 
 class BreakdownBot(PromptBot):
     def __init__(self):
+        """
+        Initializes a BreakdownBot instance. Inherits from the PromptBot class.
+        """
         super().__init__("BreakdownBot")
         self.add_cmd("I can breakdown any complex task into smaller tasks.")
         self.add_rule("I must output only a data structure in JSON format")
         self.add_rule("I cannot provide any dialog or request additional info")
         self.add_rule("I must output only in the example format.")
         self.set_example_output(f'[{{ "step": "1", "task": "The 1st task I create"}},'
-                            f'{{ "step": "2", "task": "The 2nd task I create"}}]')
+                                f'{{ "step": "2", "task": "The 2nd task I create"}}]')
 
-    def start(self, text):
+    def start(self, text: str) -> str:
+        """
+        Takes in a text string as input and uses natural language processing to break down 
+        the text into smaller tasks.
+        :param text: A string representing the complex task to be broken down.
+        :return: A JSON string representing a list of tasks with corresponding steps in the order 
+        they should be completed.
+        """
         self.set_goal(text)
         return self.run_ai()
 
 
 if __name__ == "__main__":
     bot = BreakdownBot()
-    bot.start(f"""Creating a BBQ Fire with charcoal.""")
-    print(bot.result)
+    concept = input("Enter a complex task: ")
+    bot.start(concept)
+    log.info(f"Result: \n{bot.result}")
     bot.start_improvements()
     with open("____breakdown_result.json", "w") as f:
         f.write(bot.result)

@@ -6,6 +6,10 @@ A Novel way of creating ChatGTP bots.
 `promptbot` is a python package that allows you to quickly create bots using OpenAI's GPT models. 
 It bootstraps a prompt for you and allows you to add rules and commands to the prompt.
 
+It can be grouped together as plugins to achieve more complex tasks. 
+
+**Warning: This is an experimental project and is not ready for production use.**
+
 ## Why use promptbot?
 
 `promptbot` is a great way to quickly create bots using OpenAI's GPT models to use in your cli applications. 
@@ -47,6 +51,13 @@ You can install `promptbot` using pip:
 
 ```
 pip install promptbot
+```
+
+if you want to also run the examples you need to install the example_requirements.txt file
+from the root directory of this repository:
+
+```
+pip install -r example_requirements.txt
 ```
 
 ## Configuration
